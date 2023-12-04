@@ -1,0 +1,933 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: recommendation
+Transform:
+- AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Architectures:
+    - x86_64
+  Api:
+    TracingEnabled: true
+Resources:
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: DmpRecommendation
+  EventBusArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: The ARN for the DmpRecommendation Event Bus
+      Name: /Dmp/Recommendation/EventBusArn
+      Type: String
+      Value:
+        Fn::GetAtt:
+        - EventBus
+        - Arn
+  SchemasRegistry:
+    Type: AWS::EventSchemas::Registry
+    Properties:
+      RegistryName: dmp.recommendation.srd
+      Description: DMP Recommendations Schemas
+  TaskSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      RegistryName:
+        Fn::GetAtt:
+        - SchemasRegistry
+        - RegistryName
+      SchemaName: Task
+      Description: The event is fired when a task received to be processed
+      Type: OpenApi3
+      Content: "{\n  \"openapi\": \"3.0.0\",\n  \"info\": {\n    \"version\": \"1.0.0\"\
+        ,\n    \"title\": \"Task\"\n  },\n  \"paths\":{},\n  \"components\": {\n \
+        \   \"schemas\": {\n      \"TaskPayload\": {\n        \"type\": \"object\"\
+        ,\n        \"required\": [ \"Time\", \"Source\", \"DetailType\", \"EventBusName\"\
+        , \"Detail\"],\n        \"properties\": {\n          \"Time\": {\"type\":\
+        \ \"string\", \"format\": \"date-time\"},\n          \"Source\": {\"type\"\
+        : \"string\"},\n          \"DetailType\": {\"type\": \"string\"},\n      \
+        \    \"EventBusName\": {\"type\": \"string\"},\n          \"Detail\": {\n\
+        \            \"$ref\": \"#/components/schemas/TaskDetail\"\n          }\n\
+        \        }\n      },\n      \"TaskDetail\": {\n        \"type\": \"object\"\
+        ,\n        \"required\": [\"operationKey\", \"projectId\", \"projectName\"\
+        ,  \"siteId\", \"city\", \"latitude\", \"longitude\", \"siteName\", \"siteType\"\
+        , \"jobId\", \"jobName\", \"jobCapacity\", \"requiredSkills\", \"requiredCertifications\"\
+        , \"selectCrews\"],\n        \"properties\": {\n          \"operationKey\"\
+        : {\"type\": \"string\"},\n          \"projectId\": {\"type\": \"string\"\
+        },\n          \"projectName\": {\"type\": \"string\"},\n          \"siteId\"\
+        : {\"type\": \"string\"},\n          \"city\": {\"type\": \"string\"},\n \
+        \         \"latitude\": {\"type\": \"number\"},\n          \"longitude\":\
+        \ {\"type\": \"number\"},\n          \"siteName\": {\"type\": \"string\"},\n\
+        \          \"siteType\": {\"type\": \"string\"},\n          \"jobId\": {\"\
+        type\": \"string\"},\n          \"jobName\": {\"type\": \"string\"},\n   \
+        \       \"jobCapacity\": {\"type\": \"number\"},\n          \"requiredSkills\"\
+        : {\"type\": \"number\"},\n          \"requiredCertifications\": {\"type\"\
+        : \"number\"},\n          \"selectCrews\": {\"type\": \"number\"}\n      \
+        \  }\n      }\n    }\n  }\n}\n"
+  CrewSchema:
+    Type: AWS::EventSchemas::Schema
+    Properties:
+      RegistryName:
+        Fn::GetAtt:
+        - SchemasRegistry
+        - RegistryName
+      SchemaName: Crew
+      Description: The event is fired when a crew is recommended for the task
+      Type: OpenApi3
+      Content: "{\n  \"openapi\": \"3.0.0\",\n  \"info\": {\n    \"version\": \"1.0.0\"\
+        ,\n    \"title\": \"Crew\"\n  },\n  \"paths\":{},\n  \"components\": {\n \
+        \   \"schemas\": {\n      \"CrewPayload\": {\n        \"type\": \"object\"\
+        ,\n        \"required\": [ \"Time\", \"Source\", \"DetailType\", \"EventBusName\"\
+        , \"Detail\"],\n        \"properties\": {\n          \"Time\": {\"type\":\
+        \ \"string\", \"format\": \"date-time\"},\n          \"Source\": {\"type\"\
+        : \"string\"},\n          \"DetailType\": {\"type\": \"string\"},\n      \
+        \    \"EventBusName\": {\"type\": \"string\"},\n          \"Detail\": {\n\
+        \            \"$ref\": \"#/components/schemas/CrewDetail\"\n          }\n\
+        \        }\n      },\n      \"CrewDetail\": {\n        \"type\": \"object\"\
+        ,\n        \"required\": [\"operationKey\", \"projectId\",  \"siteId\", \"\
+        jobId\", \"companyId\", \"crewId\", \"companyName\", \"city\", \"crewName\"\
+        , \"latitude\", \"longitude\",  \"skills\",  \"skilledMembers\", \"certifications\"\
+        , \"certifiedMembers\", \"requiredCertifications\", \"distanceToSite\", \"\
+        capacity\", \"rating\", \"score\", \"competence\", \"productivity\"],\n  \
+        \      \"properties\": {\n          \"operationKey\": {\"type\": \"string\"\
+        },\n          \"projectId\": {\"type\": \"string\"},\n          \"siteId\"\
+        : {\"type\": \"string\"},\n          \"jobId\": {\"type\": \"string\"},\n\
+        \          \"companyId\": {\"type\": \"string\"},\n          \"crewId\": {\"\
+        type\": \"string\"},\n          \"city\": {\"type\": \"string\"},\n      \
+        \    \"companyName\": {\"type\": \"string\"},\n          \"crewName\": {\"\
+        type\": \"string\"},\n          \"latitude\": {\"type\": \"number\"},\n  \
+        \        \"longitude\": {\"type\": \"number\"},\n          \"skills\": {\"\
+        type\": \"number\"},\n          \"skilledMembers\": {\"type\": \"number\"\
+        },\n          \"certifications\": {\"type\": \"number\"},\n          \"certifiedMembers\"\
+        : {\"type\": \"number\"},\n          \"distanceToSite\": {\"type\": \"number\"\
+        },\n          \"capacity\": {\"type\": \"number\"},\n          \"rating\"\
+        : {\"type\": \"number\"},\n          \"score\": {\"type\": \"number\"},\n\
+        \          \"availability\": {\"type\": \"number\"},\n          \"competence\"\
+        : {\"type\": \"number\"},\n          \"productivity\": {\"type\": \"number\"\
+        }\n        }\n      }\n    }\n  }\n}\n"
+  TaskRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Listen on the custom event bus for task-recommendation events
+      EventBusName:
+        Fn::GetAtt:
+        - EventBus
+        - Name
+      EventPattern:
+        source:
+        - dmp.recommendation.srd
+        detail-type:
+        - task-recommendation
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - TaskFirehose
+          - Arn
+        Id: TaskFirehose
+        RoleArn:
+          Fn::GetAtt:
+          - PublishTaskToFirehoseRole
+          - Arn
+        InputTransformer:
+          InputPathsMap:
+            operationKey: $.detail.operationKey
+            projectId: $.detail.projectId
+            projectName: $.detail.projectName
+            siteId: $.detail.siteId
+            city: $.detail.city
+            latitude: $.detail.latitude
+            longitude: $.detail.longitude
+            siteName: $.detail.siteName
+            siteType: $.detail.siteType
+            jobId: $.detail.jobId
+            jobName: $.detail.jobName
+            jobCapacity: $.detail.jobCapacity
+            requiredSkills: $.detail.requiredSkills
+            requiredCertifications: $.detail.requiredCertifications
+            selectCrews: $.detail.selectCrews
+          InputTemplate: "{\n  \"operationKey\": <operationKey>,\n  \"projectId\"\
+            : <projectId>,\n  \"projectName\": <projectName>,\n  \"siteId\": <siteId>,\n\
+            \  \"city\": <city>,\n  \"latitude\": <latitude>,\n  \"longitude\": <longitude>,\n\
+            \  \"siteName\": <siteName>,\n  \"siteType\": <siteType>,\n  \"jobId\"\
+            : <jobId>,\n  \"jobName\": <jobName>,\n  \"jobCapacity\": <jobCapacity>,\n\
+            \  \"requiredSkills\": <requiredSkills>,\n  \"requiredCertifications\"\
+            : <requiredCertifications>,\n  \"selectCrews\": <selectCrews>\n}\n"
+  CrewRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Listen on the custom event bus for crew-recommended events
+      EventBusName:
+        Fn::GetAtt:
+        - EventBus
+        - Name
+      EventPattern:
+        source:
+        - dmp.recommendation.srd
+        detail-type:
+        - crew-recommended
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - CrewFirehose
+          - Arn
+        Id: CrewFirehose
+        RoleArn:
+          Fn::GetAtt:
+          - PublishCrewToFirehoseRole
+          - Arn
+        InputTransformer:
+          InputPathsMap:
+            operationKey: $.detail.operationKey
+            projectId: $.detail.projectId
+            siteId: $.detail.siteId
+            jobId: $.detail.jobId
+            companyId: $.detail.companyId
+            crewId: $.detail.crewId
+            city: $.detail.city
+            companyName: $.detail.companyName
+            crewName: $.detail.crewName
+            latitude: $.detail.latitude
+            longitude: $.detail.longitude
+            skills: $.detail.skills
+            skilledMembers: $.detail.skilledMembers
+            certifications: $.detail.certifications
+            certifiedMembers: $.detail.certifiedMembers
+            distanceToSite: $.detail.distanceToSite
+            capacity: $.detail.capacity
+            rating: $.detail.rating
+            score: $.detail.score
+            availability: $.detail.availability
+            competence: $.detail.competence
+            productivity: $.detail.productivity
+          InputTemplate: "{\n  \"operationKey\": <operationKey>,\n  \"projectId\"\
+            : <projectId>,\n  \"siteId\": <siteId>,\n  \"jobId\": <jobId>,\n  \"companyId\"\
+            : <companyId>,\n  \"crewId\": <crewId>,\n  \"city\": <city>,\n  \"companyName\"\
+            : <companyName>,\n  \"crewName\": <crewName>,\n  \"latitude\": <latitude>,\n\
+            \  \"longitude\": <longitude>,\n  \"skills\": <skills>,\n  \"skilledMembers\"\
+            : <skilledMembers>,\n  \"certifications\": <certifications>,\n  \"certifiedMembers\"\
+            : <certifiedMembers>,\n  \"distanceToSite\": <distanceToSite>,\n  \"capacity\"\
+            : <capacity>,\n  \"rating\": <rating>,\n  \"score\": <score>,\n  \"availability\"\
+            : <availability>,\n  \"competence\": <competence>,\n  \"productivity\"\
+            : <productivity>\n}\n"
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: dmp-rad-recommendation-pool
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      AutoVerifiedAttributes:
+      - email
+      UsernameAttributes:
+      - email
+      Schema:
+      - AttributeDataType: String
+        Name: email
+        Required: false
+      - AttributeDataType: String
+        Name: name
+        Required: false
+        Mutable: true
+      - AttributeDataType: String
+        Name: family_name
+        Required: false
+        Mutable: true
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId:
+        Ref: UserPool
+      ClientName: dmp-rad-recommendation-client
+      GenerateSecret: false
+      SupportedIdentityProviders:
+      - COGNITO
+      CallbackURLs:
+      - http://localhost:3000
+      LogoutURLs:
+      - http://localhost:3000
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+      - code
+      - implicit
+      AllowedOAuthScopes:
+      - email
+      - openid
+      - profile
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: dmp-rad-recommendation-domain
+      UserPoolId:
+        Ref: UserPool
+  ProcessedTaskDataBucket:
+    Type: AWS::S3::Bucket
+  RawTaskDataBucket:
+    Type: AWS::S3::Bucket
+  ProcessedCrewDataBucket:
+    Type: AWS::S3::Bucket
+  RawCrewDataBucket:
+    Type: AWS::S3::Bucket
+  TaskGlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseInput:
+        Name: task-db
+        LocationUri:
+          Fn::Join:
+          - ''
+          - - s3://
+            - Ref: ProcessedTaskDataBucket
+            - /
+  TaskGlueTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseName:
+        Ref: TaskGlueDatabase
+      TableInput:
+        Name: task
+        Parameters:
+          classification: parquet
+        PartitionKeys:
+        - Name: year
+          Type: string
+        - Name: month
+          Type: string
+        - Name: day
+          Type: string
+        - Name: hour
+          Type: string
+        Retention: 0
+        TableType: EXTERNAL_TABLE
+        StorageDescriptor:
+          Columns:
+          - Name: operationKey
+            Type: string
+          - Name: projectId
+            Type: string
+          - Name: projectName
+            Type: string
+          - Name: siteId
+            Type: string
+          - Name: city
+            Type: string
+          - Name: latitude
+            Type: decimal
+          - Name: longitude
+            Type: decimal
+          - Name: siteName
+            Type: string
+          - Name: siteType
+            Type: string
+          - Name: jobId
+            Type: string
+          - Name: jobName
+            Type: string
+          - Name: jobCapacity
+            Type: int
+          - Name: requiredSkills
+            Type: int
+          - Name: requiredCertifications
+            Type: int
+          - Name: selectCrews
+            Type: int
+          Location:
+            Fn::Join:
+            - ''
+            - - s3://
+              - Ref: ProcessedTaskDataBucket
+              - /task/
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: true
+          NumberOfBuckets: -1
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters:
+              serialization.format: '1'
+          BucketColumns: []
+          SortColumns: []
+          StoredAsSubDirectories: false
+  CrewGlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseInput:
+        Name: crew-db
+        LocationUri:
+          Fn::Join:
+          - ''
+          - - s3://
+            - Ref: ProcessedCrewDataBucket
+            - /
+  CrewGlueTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId:
+        Ref: AWS::AccountId
+      DatabaseName:
+        Ref: CrewGlueDatabase
+      TableInput:
+        Name: crew
+        Parameters:
+          classification: parquet
+        PartitionKeys:
+        - Name: year
+          Type: string
+        - Name: month
+          Type: string
+        - Name: day
+          Type: string
+        - Name: hour
+          Type: string
+        Retention: 0
+        TableType: EXTERNAL_TABLE
+        StorageDescriptor:
+          Columns:
+          - Name: operationKey
+            Type: string
+          - Name: projectId
+            Type: string
+          - Name: siteId
+            Type: string
+          - Name: jobId
+            Type: string
+          - Name: companyId
+            Type: string
+          - Name: crewId
+            Type: string
+          - Name: city
+            Type: string
+          - Name: companyName
+            Type: string
+          - Name: crewName
+            Type: string
+          - Name: latitude
+            Type: decimal
+          - Name: longitude
+            Type: decimal
+          - Name: skills
+            Type: int
+          - Name: skilledMembers
+            Type: int
+          - Name: certifications
+            Type: int
+          - Name: certifiedMembers
+            Type: int
+          - Name: distanceToSite
+            Type: decimal
+          - Name: capacity
+            Type: int
+          - Name: rating
+            Type: decimal
+          - Name: score
+            Type: decimal
+          - Name: availability
+            Type: decimal
+          - Name: competence
+            Type: decimal
+          - Name: productivity
+            Type: decimal
+          Location:
+            Fn::Join:
+            - ''
+            - - s3://
+              - Ref: ProcessedCrewDataBucket
+              - /crew/
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Compressed: true
+          NumberOfBuckets: -1
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+            Parameters:
+              serialization.format: '1'
+          BucketColumns: []
+          SortColumns: []
+          StoredAsSubDirectories: false
+  TaskFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN:
+          Fn::GetAtt:
+          - ProcessedTaskDataBucket
+          - Arn
+        Prefix:
+          Fn::Join:
+          - ''
+          - - Ref: TaskGlueTable
+            - /year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+        ErrorOutputPrefix:
+          Fn::Join:
+          - ''
+          - - Ref: TaskGlueTable
+            - error/!{firehose:error-output-type}/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+        CompressionFormat: UNCOMPRESSED
+        RoleARN:
+          Fn::GetAtt:
+          - TaskFirehoseRole
+          - Arn
+        DataFormatConversionConfiguration:
+          Enabled: true
+          InputFormatConfiguration:
+            Deserializer:
+              HiveJsonSerDe: {}
+          OutputFormatConfiguration:
+            Serializer:
+              ParquetSerDe:
+                Compression: GZIP
+          SchemaConfiguration:
+            CatalogId:
+              Ref: AWS::AccountId
+            DatabaseName:
+              Ref: TaskGlueDatabase
+            Region:
+              Ref: AWS::Region
+            RoleARN:
+              Fn::GetAtt:
+              - TaskFirehoseRole
+              - Arn
+            TableName:
+              Ref: TaskGlueTable
+            VersionId: LATEST
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 64
+        S3BackupMode: Enabled
+        S3BackupConfiguration:
+          BucketARN:
+            Fn::GetAtt:
+            - RawTaskDataBucket
+            - Arn
+          CompressionFormat: GZIP
+          RoleARN:
+            Fn::GetAtt:
+            - TaskFirehoseRole
+            - Arn
+          BufferingHints:
+            IntervalInSeconds: 60
+            SizeInMBs: 1
+  CrewFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamType: DirectPut
+      ExtendedS3DestinationConfiguration:
+        BucketARN:
+          Fn::GetAtt:
+          - ProcessedCrewDataBucket
+          - Arn
+        Prefix:
+          Fn::Join:
+          - ''
+          - - Ref: CrewGlueTable
+            - /year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+        ErrorOutputPrefix:
+          Fn::Join:
+          - ''
+          - - Ref: CrewGlueTable
+            - error/!{firehose:error-output-type}/year=!{timestamp:YYYY}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/
+        CompressionFormat: UNCOMPRESSED
+        RoleARN:
+          Fn::GetAtt:
+          - CrewFirehoseRole
+          - Arn
+        DataFormatConversionConfiguration:
+          Enabled: true
+          InputFormatConfiguration:
+            Deserializer:
+              HiveJsonSerDe: {}
+          OutputFormatConfiguration:
+            Serializer:
+              ParquetSerDe:
+                Compression: GZIP
+          SchemaConfiguration:
+            CatalogId:
+              Ref: AWS::AccountId
+            DatabaseName:
+              Ref: CrewGlueDatabase
+            Region:
+              Ref: AWS::Region
+            RoleARN:
+              Fn::GetAtt:
+              - CrewFirehoseRole
+              - Arn
+            TableName:
+              Ref: CrewGlueTable
+            VersionId: LATEST
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 64
+        S3BackupMode: Enabled
+        S3BackupConfiguration:
+          BucketARN:
+            Fn::GetAtt:
+            - RawCrewDataBucket
+            - Arn
+          CompressionFormat: GZIP
+          RoleARN:
+            Fn::GetAtt:
+            - CrewFirehoseRole
+            - Arn
+          BufferingHints:
+            IntervalInSeconds: 60
+            SizeInMBs: 1
+  TaskFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: firehose.amazonaws.com
+          Action:
+          - sts:AssumeRole
+          Condition:
+            StringEquals:
+              sts:ExternalId:
+                Ref: AWS::AccountId
+      Policies:
+      - PolicyName: S3WritePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Action:
+            - s3:AbortMultipartUpload
+            - s3:GetBucketLocation
+            - s3:GetObject
+            - s3:ListBucket
+            - s3:ListBucketMultipartUploads
+            - s3:PutObject
+            Effect: Allow
+            Resource:
+            - Fn::GetAtt:
+              - RawTaskDataBucket
+              - Arn
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: RawTaskDataBucket
+                - '*'
+            - Fn::GetAtt:
+              - ProcessedTaskDataBucket
+              - Arn
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: ProcessedTaskDataBucket
+                - '*'
+      - PolicyName: GluePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Action:
+            - glue:GetTable
+            - glue:GetTableVersion
+            - glue:GetTableVersions
+            Effect: Allow
+            Resource:
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :table/
+                - Ref: TaskGlueDatabase
+                - /
+                - Ref: TaskGlueTable
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :database/
+                - Ref: TaskGlueDatabase
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :catalog
+  CrewFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: firehose.amazonaws.com
+          Action:
+          - sts:AssumeRole
+          Condition:
+            StringEquals:
+              sts:ExternalId:
+                Ref: AWS::AccountId
+      Policies:
+      - PolicyName: S3WritePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Action:
+            - s3:AbortMultipartUpload
+            - s3:GetBucketLocation
+            - s3:GetObject
+            - s3:ListBucket
+            - s3:ListBucketMultipartUploads
+            - s3:PutObject
+            Effect: Allow
+            Resource:
+            - Fn::GetAtt:
+              - RawCrewDataBucket
+              - Arn
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: RawCrewDataBucket
+                - '*'
+            - Fn::GetAtt:
+              - ProcessedCrewDataBucket
+              - Arn
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: ProcessedCrewDataBucket
+                - '*'
+      - PolicyName: GluePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Action:
+            - glue:GetTable
+            - glue:GetTableVersion
+            - glue:GetTableVersions
+            Effect: Allow
+            Resource:
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :table/
+                - Ref: CrewGlueDatabase
+                - /
+                - Ref: CrewGlueTable
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :database/
+                - Ref: CrewGlueDatabase
+            - Fn::Join:
+              - ''
+              - - 'arn:aws:glue:'
+                - Ref: AWS::Region
+                - ':'
+                - Ref: AWS::AccountId
+                - :catalog
+  PublishTaskToFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: TaskFirehosePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - firehose:PutRecord
+            - firehose:PutRecordBatch
+            Resource:
+            - Fn::GetAtt:
+              - TaskFirehose
+              - Arn
+  PublishCrewToFirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: CrewFirehosePolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - firehose:PutRecord
+            - firehose:PutRecordBatch
+            Resource:
+            - Fn::GetAtt:
+              - CrewFirehose
+              - Arn
+  RestApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: DMP Recommendation Service
+      Description: DMP Recommendation REST API
+      StageName: dev
+      TracingEnabled: true
+      Cors:
+        AllowMethods: '''*'''
+        AllowHeaders: '''*'''
+        AllowOrigin: '''*'''
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn:
+              Fn::GetAtt:
+              - UserPool
+              - Arn
+  SampleTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+  getTaskByIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-task.handler
+      MemorySize: 128
+      Timeout: 100
+      Description: Recommendation for the task OperationKey (id)
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SampleTable
+      Environment:
+        Variables:
+          SAMPLE_TABLE:
+            Ref: SampleTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Auth:
+              Authorizer: CognitoAuthorizer
+            RestApiId:
+              Ref: RestApiGateway
+            Path: /task/{id}
+            Method: GET
+      CodeUri: getTaskByIdFunction
+    Metadata:
+      SamResourceId: getTaskByIdFunction
+  getMockTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/get-mock-task.handler
+      MemorySize: 256
+      Timeout: 100
+      Description: Returns a mock payload for the task
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Auth:
+              Authorizer: CognitoAuthorizer
+            RestApiId:
+              Ref: RestApiGateway
+            Path: /mock/task
+            Method: GET
+      CodeUri: getMockTaskFunction
+    Metadata:
+      SamResourceId: getMockTaskFunction
+  postTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/post-task.handler
+      MemorySize: 256
+      Timeout: 100
+      Description: Select recommendations for provided tak objectives
+      Tracing: Active
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SampleTable
+      - Statement:
+        - Sid: PutEventToEventBuss
+          Effect: Allow
+          Action:
+          - events:PutEvents
+          Resource:
+            Fn::GetAtt:
+            - EventBus
+            - Arn
+      Environment:
+        Variables:
+          SAMPLE_TABLE:
+            Ref: SampleTable
+          REGION:
+            Ref: AWS::Region
+          POWERTOOLS_SERVICE_NAME: DMP-Recommendation-Dev
+          LOG_LEVEL: DEBUG
+          REGISTRY_NAME: dmp.recommendation.srd
+          EVENT_BUS_NAME: DmpRecommendation
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: RestApiGateway
+            Auth:
+              Authorizer: CognitoAuthorizer
+            Path: /task
+            Method: POST
+      CodeUri: postTaskFunction
+    Metadata:
+      SamResourceId: postTaskFunction
+Outputs:
+  WebEndpoint:
+    Description: API Gateway endpoint URL for Prod stage
+    Value:
+      Fn::Sub: https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/
+  UserPoolId:
+    Description: User Pool ID
+    Value:
+      Ref: UserPool
+  UserPoolClientId:
+    Description: User Pool Client ID
+    Value:
+      Ref: UserPoolClient
+  AuthUrl:
+    Description: URL used for authentication
+    Value:
+      Fn::Sub: https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+  UserPoolArn:
+    Description: Auth service UserPool Arn
+    Value:
+      Fn::GetAtt:
+      - UserPool
+      - Arn

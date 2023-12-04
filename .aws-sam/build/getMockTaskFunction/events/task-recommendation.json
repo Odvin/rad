@@ -1,0 +1,9 @@
+[
+  {
+    "Time": "2020-04-15T21:30:00",
+    "Source": "dmp.recommendation.srd",
+    "EventBusName": "DmpRecommendation",
+    "DetailType": "task-recommendation",
+    "Detail": "{\"operationKey\": \"3d09ecef-db4e-4e48-b7f4-ed0286cbcad9\", \"projectId\": \"c1bcc8bb-abb5-4afb-aae5-f17e2ec06b52\", \"projectName\": \"Up-sized composite encryption\", \"siteId\": \"d1e3b053-97ca-4bbf-8715-4d5b235d554c\", \"city\": \"Sparks\", \"latitude\": -59.5874, \"longitude\": -39.1632, \"siteName\": \"Spencer - Hyatt\", \"siteType\": \"UMTS\", \"jobId\": \"da83122c-68aa-4a9e-9d7e-436c5c7322ad\", \"jobName\": \"wireless\", \"jobCapacity\": 30, \"requiredSkills\": 3, \"requiredCertifications\": 18, \"selectCrews\": 2}"
+  }
+]

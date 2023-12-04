@@ -1,0 +1,9 @@
+[
+  {
+    "Time": "2020-04-15T21:30:00",
+    "Source": "dmp.recommendation.srd",
+    "EventBusName": "DmpRecommendation",
+    "DetailType": "crew-recommended",
+    "Detail": "{\"operationKey\": \"3d09ecef-db4e-4e48-b7f4-ed0286cbcad9\", \"projectId\": \"c1bcc8bb-abb5-4afb-aae5-f17e2ec06b52\", \"siteId\": \"d1e3b053-97ca-4bbf-8715-4d5b235d554c\", \"jobId\": \"da83122c-68aa-4a9e-9d7e-436c5c7322ad\", \"companyId\": \"c3594b07-d381-412e-a82b-9f434585ca3c\", \"companyName\": \"Pagac LLC\", \"crewId\": \"11568e3d-11ab-45b5-bb56-f2953c0ad72f\", \"city\": \"East Veldaboro\", \"crewName\": \"Aufderhar - Wintheiser\", \"latitude\": -17.3304, \"longitude\": -122.6038, \"skills\": 0, \"skilledMembers\": 0, \"certifications\": 0, \"certifiedMembers\": 0, \"distanceToSite\": 7985.014072214149, \"capacity\": 15, \"rating\": 1.715, \"score\": 1.4282290710025511, \"availability\": 0.020037535131811474, \"competence\": 0, \"productivity\": 0.9997678604966415 }"
+  }
+]
