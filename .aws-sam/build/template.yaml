@@ -319,9 +319,9 @@ Resources:
           - Name: city
             Type: string
           - Name: latitude
-            Type: decimal
+            Type: float
           - Name: longitude
-            Type: decimal
+            Type: float
           - Name: siteName
             Type: string
           - Name: siteType
@@ -411,9 +411,9 @@ Resources:
           - Name: crewName
             Type: string
           - Name: latitude
-            Type: decimal
+            Type: float
           - Name: longitude
-            Type: decimal
+            Type: float
           - Name: skills
             Type: int
           - Name: skilledMembers
@@ -423,19 +423,19 @@ Resources:
           - Name: certifiedMembers
             Type: int
           - Name: distanceToSite
-            Type: decimal
+            Type: float
           - Name: capacity
             Type: int
           - Name: rating
-            Type: decimal
+            Type: float
           - Name: score
-            Type: decimal
+            Type: float
           - Name: availability
-            Type: decimal
+            Type: float
           - Name: competence
-            Type: decimal
+            Type: float
           - Name: productivity
-            Type: decimal
+            Type: float
           Location:
             Fn::Join:
             - ''
